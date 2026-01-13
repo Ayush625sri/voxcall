@@ -105,6 +105,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
     return () => unsubscribe();
   }, [incomingCall?.id, user]);
+
   // Monitor active call status
   useEffect(() => {
     if (!user || !activeCall) return;
@@ -137,19 +138,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
           // Update status
           if (data.status !== activeCall.status) {
-            if (data.status === "ended") {
-              // Cleanup
-              if (localStream) {
-                localStream.getTracks().forEach((track) => track.stop());
-                setLocalStream(null);
-              }
-              if (peerConnection.current) {
-                peerConnection.current.close();
-                peerConnection.current = null;
-              }
-              if (answerListener.current) answerListener.current();
-              if (candidatesListener.current) candidatesListener.current();
-              setRemoteStream(null);
+            if (data.status === "ended" || data.status === "declined") {
+              forceCleanup();
               setActiveCall(null);
             } else {
               setActiveCall({
@@ -422,9 +412,44 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       await remove(ref(rtdb, `signaling/${user.uid}/offer`));
     }
   };
+
+  const forceCleanup = () => {
+    // Stop all tracks
+    if (localStream) {
+      localStream.getTracks().forEach((track) => {
+        track.stop();
+        track.enabled = false;
+      });
+      setLocalStream(null);
+    }
+
+    if (remoteStream) {
+      remoteStream.getTracks().forEach((track) => {
+        track.stop();
+        track.enabled = false;
+      });
+      setRemoteStream(null);
+    }
+
+    // Close peer connection
+    if (peerConnection.current) {
+      peerConnection.current.close();
+      peerConnection.current = null;
+    }
+
+    // Unsubscribe listeners
+    if (answerListener.current) {
+      answerListener.current();
+      answerListener.current = null;
+    }
+    if (candidatesListener.current) {
+      candidatesListener.current();
+      candidatesListener.current = null;
+    }
+  };
+
   const declineCall = async (callId: string) => {
-    if (answerListener.current) answerListener.current();
-    if (candidatesListener.current) candidatesListener.current();
+    forceCleanup();
 
     await updateDoc(doc(db, "calls", callId), {
       status: "declined",
@@ -434,14 +459,6 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   };
 
   const endCall = async (callId: string) => {
-    if (answerListener.current) {
-      answerListener.current();
-      answerListener.current = null;
-    }
-    if (candidatesListener.current) {
-      candidatesListener.current();
-      candidatesListener.current = null;
-    }
     const endTime = new Date();
     const call = activeCall;
     const duration = call?.startTime
@@ -456,19 +473,11 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       duration,
     });
 
-    // Cleanup WebRTC
-    if (localStream) {
-      localStream.getTracks().forEach((track) => track.stop());
-      setLocalStream(null);
-    }
-    if (peerConnection.current) {
-      peerConnection.current.close();
-      peerConnection.current = null;
-    }
+    forceCleanup();
+
     if (user) {
       await remove(ref(rtdb, `signaling/${user.uid}`));
     }
-    setRemoteStream(null);
     setActiveCall(null);
   };
 
