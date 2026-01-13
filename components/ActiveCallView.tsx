@@ -144,8 +144,7 @@ export default function ActiveCallView() {
     setDuration(0);
   }, [activeCall?.id]);
 
-  // if (!activeCall || !user || activeCall.status !== "active") return null;
-  if (!activeCall || !user || activeCall.type !== "video") return null;
+  if (!activeCall || !user) return null;
   const shouldShow =
     activeCall.status === "active" ||
     (activeCall.status === "ringing" && activeCall.callerId === user.uid);
@@ -181,9 +180,9 @@ export default function ActiveCallView() {
       : activeCall.callerName;
 
   return (
-    <div className="fixed inset-0 bg-gray-900 z-50 flex flex-col">
+    <div className="fixed inset-0 bg-gray-900 z-50 flex flex-col items-center justify-center">
       {/* Participants Grid */}
-      <div className="flex-1 flex items-center justify-center gap-8 p-8">
+      <div className="flex-1 w-[100%]  flex flex-col sm:flex-row sm:items-center justify-center gap-8 p-8">
         {/* Current User */}
         <div className="flex flex-col items-center">
           {isVideo && localStream ? (
@@ -286,7 +285,7 @@ export default function ActiveCallView() {
       </div>
 
       {/* Controls */}
-      <div className="p-6 bg-gray-800">
+      <div className="p-6 bg-gray-800 w-[100%]">
         <div className="flex justify-center gap-4">
           <button
             onClick={handleToggleMute}

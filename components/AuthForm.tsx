@@ -12,7 +12,6 @@ interface AuthFormProps {
   ) => Promise<void>;
 }
 
-
 export default function AuthForm({ mode, onSubmit }: AuthFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -37,7 +36,7 @@ export default function AuthForm({ mode, onSubmit }: AuthFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 w-full max-w-md">
+    <form onSubmit={handleSubmit} className="space-y-4 w-full">
       {mode === "signup" && (
         <input
           type="text"
@@ -54,7 +53,7 @@ export default function AuthForm({ mode, onSubmit }: AuthFormProps) {
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         required
-        className="w-full px-4 py-2  rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-600"
+        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-600"
       />
       <input
         type="password"
@@ -62,7 +61,7 @@ export default function AuthForm({ mode, onSubmit }: AuthFormProps) {
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         required
-        className="w-full px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-600"
+        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-600"
       />
       {error && <p className="text-red-500 text-sm">{error}</p>}
       <button

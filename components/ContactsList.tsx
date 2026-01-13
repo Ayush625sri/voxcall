@@ -253,24 +253,16 @@ export default function ContactsList() {
   };
 
   const handleVoiceCall = async (contact: Contact) => {
-    await initiateCall(
-      contact.uid,
-      contact.displayName,
-      "voice"
-    );
+    await initiateCall(contact.uid, contact.displayName, "voice");
   };
 
   const handleVideoCall = async (contact: Contact) => {
-    await initiateCall(
-      contact.uid,
-      contact.displayName,
-      "video"
-    );
+    await initiateCall(contact.uid, contact.displayName, "video");
   };
 
   return (
     <div className="space-y-6">
-      <form onSubmit={sendRequest} className="flex gap-2">
+      <form onSubmit={sendRequest} className="flex flex-col sm:flex-row gap-2">
         <input
           type="email"
           placeholder="Send contact request by email"
@@ -282,7 +274,7 @@ export default function ContactsList() {
         <button
           type="submit"
           disabled={loading}
-          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap"
         >
           {loading ? "Sending..." : "Send Request"}
         </button>
@@ -298,24 +290,26 @@ export default function ContactsList() {
           {receivedRequests.map((request) => (
             <div
               key={request.id}
-              className="flex items-center justify-between p-4 border border-blue-200 bg-blue-50 rounded-lg"
+              className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border border-blue-200 bg-blue-50 rounded-lg gap-3"
             >
-              <div>
-                <p className="font-medium text-gray-500">
+              <div className="min-w-0">
+                <p className="font-medium text-gray-500 truncate">
                   {request.fromDisplayName}
                 </p>
-                <p className="text-sm text-gray-500">{request.fromEmail}</p>
+                <p className="text-sm text-gray-500 truncate">
+                  {request.fromEmail}
+                </p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 shrink-0">
                 <button
                   onClick={() => acceptRequest(request)}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                  className="flex-1 sm:flex-none px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
                 >
                   Accept
                 </button>
                 <button
                   onClick={() => declineRequest(request)}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                  className="flex-1 sm:flex-none px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
                 >
                   Decline
                 </button>
@@ -336,32 +330,34 @@ export default function ContactsList() {
             {contacts.map((contact) => (
               <div
                 key={contact.uid}
-                className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
+                className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 gap-3"
               >
-                <div>
-                  <p className="font-medium text-gray-900">
+                <div className="min-w-0">
+                  <p className="font-medium text-gray-900 truncate">
                     {contact.displayName}
                   </p>
-                  <p className="text-sm text-gray-500">{contact.email}</p>
+                  <p className="text-sm text-gray-500 truncate">
+                    {contact.email}
+                  </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 shrink-0">
                   <button
                     onClick={() => handleVoiceCall(contact)}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                    className="flex-1 sm:flex-none px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
                     title="Voice Call"
                   >
                     <PhoneCall className="w-4" />
                   </button>
                   <button
                     onClick={() => handleVideoCall(contact)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    className="flex-1 sm:flex-none px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                     title="Video Call"
                   >
                     <Video className="w-4" />
                   </button>
                   <button
                     onClick={() => removeContact(contact.uid)}
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                    className="flex-1 sm:flex-none px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
                     title="Remove contact"
                   >
                     <Trash2 className="w-4" />
@@ -383,14 +379,14 @@ export default function ContactsList() {
             .map((request) => (
               <div
                 key={request.id}
-                className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50"
+                className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border border-gray-200 rounded-lg bg-gray-50 gap-3"
               >
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-600 truncate">
                   Request sent to {request.toEmail}
                 </p>
                 <button
                   onClick={() => cancelRequest(request.id)}
-                  className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700"
+                  className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 whitespace-nowrap"
                 >
                   Cancel
                 </button>
