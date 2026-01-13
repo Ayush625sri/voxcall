@@ -15,10 +15,12 @@ import {
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/lib/auth-context";
 import { Contact, ContactRequest } from "@/types";
-import { Phone, Trash2, Video } from "lucide-react";
+import { PhoneCall, Trash2, Video } from "lucide-react";
+import { useCall } from "@/lib/call-context";
 
 export default function ContactsList() {
   const { user } = useAuth();
+  const { initiateCall } = useCall();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [sentRequests, setSentRequests] = useState<ContactRequest[]>([]);
   const [receivedRequests, setReceivedRequests] = useState<ContactRequest[]>(
@@ -84,86 +86,86 @@ export default function ContactsList() {
     };
   }, [user]);
 
-const sendRequest = async (e: React.FormEvent) => {
-  e.preventDefault();
-  if (!user) return;
+  const sendRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
 
-  setLoading(true);
-  setError("");
+    setLoading(true);
+    setError("");
 
-  try {
-    const usersRef = collection(db, "users");
-    const q = query(usersRef, where("email", "==", email));
-    const querySnapshot = await getDocs(q);
+    try {
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("email", "==", email));
+      const querySnapshot = await getDocs(q);
 
-    if (querySnapshot.empty) {
-      setError("User not found");
-      return;
+      if (querySnapshot.empty) {
+        setError("User not found");
+        return;
+      }
+
+      const targetUser = querySnapshot.docs[0].data();
+
+      if (targetUser.uid === user.uid) {
+        setError("Cannot add yourself");
+        return;
+      }
+
+      // Check if already in contacts
+      const contactQuery = query(
+        collection(db, "contacts"),
+        where("userId", "==", user.uid),
+        where("contactUid", "==", targetUser.uid)
+      );
+      const existingContactSnap = await getDocs(contactQuery);
+      if (!existingContactSnap.empty) {
+        setError("Already in contacts");
+        return;
+      }
+
+      // Check for any pending/active requests FROM this user TO target
+      const sentRequestQuery = query(
+        collection(db, "contactRequests"),
+        where("fromUid", "==", user.uid),
+        where("toUid", "==", targetUser.uid),
+        where("status", "==", "pending")
+      );
+      const sentRequestSnap = await getDocs(sentRequestQuery);
+      if (!sentRequestSnap.empty) {
+        setError("Request already sent");
+        return;
+      }
+
+      // Check for any pending requests FROM target TO this user
+      const receivedRequestQuery = query(
+        collection(db, "contactRequests"),
+        where("fromUid", "==", targetUser.uid),
+        where("toUid", "==", user.uid),
+        where("status", "==", "pending")
+      );
+      const receivedRequestSnap = await getDocs(receivedRequestQuery);
+      if (!receivedRequestSnap.empty) {
+        setError("This user already sent you a request. Check your requests.");
+        return;
+      }
+
+      const requestData: Omit<ContactRequest, "id"> = {
+        fromUid: user.uid,
+        fromEmail: user.email,
+        fromDisplayName: user.displayName,
+        toUid: targetUser.uid,
+        toEmail: targetUser.email,
+        status: "pending",
+        createdAt: new Date(),
+      };
+
+      await addDoc(collection(db, "contactRequests"), requestData);
+      setEmail("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to send request");
+    } finally {
+      setLoading(false);
     }
-
-    const targetUser = querySnapshot.docs[0].data();
-
-    if (targetUser.uid === user.uid) {
-      setError("Cannot add yourself");
-      return;
-    }
-
-    // Check if already in contacts
-    const contactQuery = query(
-      collection(db, "contacts"),
-      where("userId", "==", user.uid),
-      where("contactUid", "==", targetUser.uid)
-    );
-    const existingContactSnap = await getDocs(contactQuery);
-    if (!existingContactSnap.empty) {
-      setError("Already in contacts");
-      return;
-    }
-
-    // Check for any pending/active requests FROM this user TO target
-    const sentRequestQuery = query(
-      collection(db, "contactRequests"),
-      where("fromUid", "==", user.uid),
-      where("toUid", "==", targetUser.uid),
-      where("status", "==", "pending")
-    );
-    const sentRequestSnap = await getDocs(sentRequestQuery);
-    if (!sentRequestSnap.empty) {
-      setError("Request already sent");
-      return;
-    }
-
-    // Check for any pending requests FROM target TO this user
-    const receivedRequestQuery = query(
-      collection(db, "contactRequests"),
-      where("fromUid", "==", targetUser.uid),
-      where("toUid", "==", user.uid),
-      where("status", "==", "pending")
-    );
-    const receivedRequestSnap = await getDocs(receivedRequestQuery);
-    if (!receivedRequestSnap.empty) {
-      setError("This user already sent you a request. Check your requests.");
-      return;
-    }
-
-    const requestData: Omit<ContactRequest, "id"> = {
-      fromUid: user.uid,
-      fromEmail: user.email,
-      fromDisplayName: user.displayName,
-      toUid: targetUser.uid,
-      toEmail: targetUser.email,
-      status: "pending",
-      createdAt: new Date(),
-    };
-
-    await addDoc(collection(db, "contactRequests"), requestData);
-    setEmail("");
-  } catch (err) {
-    setError(err instanceof Error ? err.message : "Failed to send request");
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const acceptRequest = async (request: ContactRequest) => {
     if (!user) return;
@@ -250,6 +252,22 @@ const sendRequest = async (e: React.FormEvent) => {
     }
   };
 
+  const handleVoiceCall = async (contact: Contact) => {
+    await initiateCall(
+      contact.uid,
+      contact.displayName,
+      "voice"
+    );
+  };
+
+  const handleVideoCall = async (contact: Contact) => {
+    await initiateCall(
+      contact.uid,
+      contact.displayName,
+      "video"
+    );
+  };
+
   return (
     <div className="space-y-6">
       <form onSubmit={sendRequest} className="flex gap-2">
@@ -328,12 +346,14 @@ const sendRequest = async (e: React.FormEvent) => {
                 </div>
                 <div className="flex gap-2">
                   <button
+                    onClick={() => handleVoiceCall(contact)}
                     className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
                     title="Voice Call"
                   >
-                    <Phone className="w-4" />
+                    <PhoneCall className="w-4" />
                   </button>
                   <button
+                    onClick={() => handleVideoCall(contact)}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                     title="Video Call"
                   >
